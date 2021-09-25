@@ -65,10 +65,10 @@ function set_tags {
   title="$5"
   echo "Setting $file: genre=$genre, artist=$artist, album=$album, title=$title"
   kid3-cli \
-    -c "set genre '$genre'" \
-    -c "set artist '$artist'" \
-    -c "set album '$album'" \
-    -c "set title '$title'" \
+    -c "set genre \"$genre\"" \
+    -c "set artist \"$artist\"" \
+    -c "set album \"$album\"" \
+    -c "set title \"$title\"" \
     "$file"
 }
 
