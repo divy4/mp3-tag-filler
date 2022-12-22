@@ -1,20 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+CACHE_FILE="$(realpath "$(dirname "${BASH_SOURCE[0]}")/cache")"
+
 function main {
-  if [[ "$#" -ne 1 ]] || [[ ! -d "$1" ]]; then
-    echo "Usage: ${BASH_SOURCE[0]} DIR"
-    echo ''
-    echo 'Fills in mp3 tags for all .mp3 files inside DIR.'
+  if [[ "$#" -ne 2 ]] || [[ ! -d "$1" ]] || [[ ! "$2" =~ ^(all|new)$ ]]; then
+    cat <<EOF
+Usage: ${BASH_SOURCE[0]} DIR SUBSET"
+
+Fills in mp3 tags for all new .mp3 files inside DIR. Set SUBSET to 'all' to
+run on all files or 'new' for new files compared to the last run.
+EOF
     return 1
   fi
   cd "$1"
-  get_files | generate_tags | tag_files
+  get_files "$2" | generate_tags | tag_files
 }
 
 # Lists each file that should be tagged
 function get_files {
-  find . -type f -name '*.mp3' -printf '%P\n'
+  local cached new
+  case "$1" in
+  new)
+    mapfile -t cached < <(sort "$CACHE_FILE" 2> /dev/null || true);;
+  all)
+    cached=()
+  esac
+  mapfile -t new < <(comm -23 \
+    <(find . -type f -name '*.mp3' -printf '%P\n' | sort) \
+    <(printf '%s\n' "${cached[@]}") \
+  )
+  # Cache new files
+  printf '%s\n' "${cached[@]}" "${new[@]}" | sort > "$CACHE_FILE"
+  # Output new files
+  if [[ "${#new[@]}" -ne 0 ]]; then
+    printf '%s\n' "${new[@]}"
+  fi
 }
 
 # Generates tags for each file
